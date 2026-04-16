@@ -12,31 +12,17 @@ Everything in the dev environment authenticates with a single GitHub Personal Ac
 
 ### Creating the token
 
-Go to **https://github.com/settings/personal-access-tokens/new** and create a **fine-grained PAT**:
+Use a **classic PAT** — fine-grained PATs do not yet fully support pushing to `ghcr.io`.
 
-| Setting | Value |
-|---------|-------|
-| Resource owner | your user or org |
-| Repository access | Only select repositories → your fork |
-| Expiry | 90 days (set a calendar reminder to rotate) |
+Go to **[github.com/settings/tokens/new](https://github.com/settings/tokens/new)** and select these scopes:
 
-Under **Repository permissions**, set:
+| Scope | Why |
+|-------|-----|
+| `repo` | Clone, push, PRs, and deploy key management via API |
+| `write:packages` | Push images to `ghcr.io` |
+| `read:packages` | Pull images from `ghcr.io` |
 
-| Permission | Level |
-|------------|-------|
-| Contents | Read and write |
-| Pull requests | Read and write |
-| Administration | Read and write |
-| Metadata | Read (automatic) |
-
-Under **Account permissions**, set:
-
-| Permission | Level |
-|------------|-------|
-| Packages | Read and write |
-
-`Administration: Read and write` is needed so `setup-dev.sh` can add and rotate the container's SSH deploy key via the GitHub API — no manual browser step required.  
-`Packages: Read and write` covers pushing and pulling images to/from `ghcr.io`.
+Set an expiry (90 days recommended) and add a calendar reminder to rotate it before it expires.
 
 ### Where it goes
 
