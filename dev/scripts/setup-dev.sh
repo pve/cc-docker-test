@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# setup-dev.sh — one-time setup inside a cc-dev container
+# Run: docker exec cc-dev-<instance> /scripts/setup-dev.sh
+# Fully non-interactive: deploy key is added to GitHub automatically via gh API.
+
+set -euo pipefail
+
+FORK_SSH="git@github.com:pve/nanobot-ai.git"
+UPSTREAM_HTTPS="https://github.com/HKUDS/nanobot.git"
+WORKSPACE="/workspace"
+FORK_REPO_PATH="pve/nanobot-ai"
+
+echo "==> Authenticating gh CLI"
+echo "${GITHUB_TOKEN}" | gh auth login --with-token
+
+echo "==> Logging into ghcr.io"
+echo "${GITHUB_TOKEN}" | docker login ghcr.io -u pve --password-stdin
+
+echo "==> Configuring git identity"
+git config --global user.name  "${GIT_AUTHOR_NAME}"
+git config --global user.email "${GIT_AUTHOR_EMAIL}"
+git config --global init.defaultBranch main
+
+echo "==> Generating SSH keypair (if not already present)"
+if [ ! -f /root/.ssh/id_ed25519 ]; then
+    ssh-keygen -t ed25519 -C "${GIT_AUTHOR_EMAIL}" -f /root/.ssh/id_ed25519 -N ""
+fi
+
+# Determine a unique deploy key title using the container hostname
+KEY_TITLE="cc-dev-$(hostname)"
+PUB_KEY="$(cat /root/.ssh/id_ed25519.pub)"
+
+echo "==> Adding deploy key '${KEY_TITLE}' to ${FORK_REPO_PATH}"
+# Remove any existing key with the same title to avoid duplicates on re-runs
+EXISTING_KEY_ID=$(gh api "repos/${FORK_REPO_PATH}/keys" \
+    --jq ".[] | select(.title == \"${KEY_TITLE}\") | .id" 2>/dev/null || true)
+if [ -n "${EXISTING_KEY_ID}" ]; then
+    echo "    Removing existing key with same title (id=${EXISTING_KEY_ID})"
+    gh api -X DELETE "repos/${FORK_REPO_PATH}/keys/${EXISTING_KEY_ID}"
+fi
+gh api "repos/${FORK_REPO_PATH}/keys" \
+    -f title="${KEY_TITLE}" \
+    -f key="${PUB_KEY}" \
+    -F read_only=false
+echo "    Deploy key added."
+
+echo "==> Cloning fork (if workspace is empty)"
+if [ ! -d "${WORKSPACE}/.git" ]; then
+    git clone "${FORK_SSH}" "${WORKSPACE}"
+fi
+
+echo "==> Adding upstream remote (if not already set)"
+cd "${WORKSPACE}"
+if ! git remote | grep -q upstream; then
+    git remote add upstream "${UPSTREAM_HTTPS}"
+fi
+
+echo "==> Fetching upstream and syncing main"
+git fetch upstream
+git checkout main
+git merge --ff-only upstream/main || {
+    echo "WARNING: fast-forward failed — fork has local commits ahead of upstream."
+    echo "         Review with: git log upstream/main..HEAD"
+}
+
+echo ""
+echo "==> Setup complete. You can now run 'claude' to start Claude Code."

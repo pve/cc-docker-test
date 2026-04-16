@@ -1,0 +1,43 @@
+services:
+  cc-dev:
+    # Container name is explicit so docker commands can reference it by name.
+    # Project name (cc-dev-${INSTANCE}) is set by spawn-dev.sh via -p flag,
+    # which also prefixes all volume names automatically.
+    container_name: cc-dev-${INSTANCE}
+    build:
+      context: .
+      dockerfile: Dockerfile.cc-dev
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - workspace:/workspace
+      - home:/root/.claude
+      - ssh:/root/.ssh
+      - data:/root/.nanobot
+    ports:
+      - "${SSH_PORT}:22"
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME}
+      - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL}
+      - GIT_COMMITTER_NAME=${GIT_AUTHOR_NAME}
+      - GIT_COMMITTER_EMAIL=${GIT_AUTHOR_EMAIL}
+      - FORK_REPO=github.com/pve/nanobot-ai
+      - SSH_AUTHORIZED_KEY=${SSH_AUTHORIZED_KEY}
+    networks:
+      - nanobot-dev-net
+    restart: unless-stopped
+    labels:
+      cc.env: dev
+      cc.instance: ${INSTANCE}
+      cc.ssh.port: "${SSH_PORT}"
+
+volumes:
+  workspace:
+  home:
+  ssh:
+  data:
+
+networks:
+  nanobot-dev-net:
+    name: nanobot-dev-net
+    driver: bridge

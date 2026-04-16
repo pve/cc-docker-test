@@ -1,0 +1,65 @@
+FROM ubuntu:24.04
+
+ARG TARGETARCH=amd64
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Base tools + SSH server
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    git \
+    vim \
+    jq \
+    openssh-client \
+    openssh-server \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Docker CLI (client only — daemon runs on the host)
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
+    echo "deb [arch=${TARGETARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu noble stable" \
+    > /etc/apt/sources.list.d/docker.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends docker-ce-cli && \
+    rm -rf /var/lib/apt/lists/*
+
+# GitHub CLI
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    -o /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=${TARGETARCH} signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+    > /etc/apt/sources.list.d/github-cli.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends gh && \
+    rm -rf /var/lib/apt/lists/*
+
+# Node.js 22 (required by Claude Code)
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Claude Code CLI
+RUN npm install -g @anthropic-ai/claude-code
+
+# sshd config: key auth only, no passwords, no PAM
+RUN mkdir -p /var/run/sshd && \
+    sed -i \
+        -e 's/#PermitRootLogin.*/PermitRootLogin prohibit-password/' \
+        -e 's/#PasswordAuthentication.*/PasswordAuthentication no/' \
+        -e 's/#PubkeyAuthentication.*/PubkeyAuthentication yes/' \
+        -e 's/UsePAM yes/UsePAM no/' \
+        /etc/ssh/sshd_config
+
+# SSH client config: disable strict host checking for github.com
+RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh && \
+    printf 'Host github.com\n  StrictHostKeyChecking no\n  IdentityFile /root/.ssh/id_ed25519\n' \
+    > /root/.ssh/config && chmod 600 /root/.ssh/config
+
+WORKDIR /workspace
+
+# Copy all dev scripts into the image so CC can run them from inside the container
+# (spawn-dev.sh, ls-dev.sh, setup-dev.sh, package.sh, entrypoint.sh)
+COPY scripts/ /scripts/
+RUN chmod +x /scripts/*.sh
+
+ENTRYPOINT ["/scripts/entrypoint.sh"]
