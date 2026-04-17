@@ -30,12 +30,14 @@ chmod 600 /root/.ssh/environment
 # volume and symlink it back.
 CLAUDE_JSON_STORE="/root/.claude/.claude.json"
 CLAUDE_JSON_LINK="/root/.claude.json"
+# If a real file exists at the link path, migrate it into the volume first
 if [ -f "${CLAUDE_JSON_LINK}" ] && [ ! -L "${CLAUDE_JSON_LINK}" ]; then
     mv "${CLAUDE_JSON_LINK}" "${CLAUDE_JSON_STORE}"
 fi
-if [ -f "${CLAUDE_JSON_STORE}" ]; then
-    ln -sf "${CLAUDE_JSON_STORE}" "${CLAUDE_JSON_LINK}"
-fi
+# Always ensure symlink exists; initialise with {} on first run so claude
+# writes into the volume-backed file from the start
+[ -f "${CLAUDE_JSON_STORE}" ] || echo '{}' > "${CLAUDE_JSON_STORE}"
+ln -sf "${CLAUDE_JSON_STORE}" "${CLAUDE_JSON_LINK}"
 
 # Generate host keys if not already present (needed on first start)
 ssh-keygen -A
