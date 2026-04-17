@@ -8,11 +8,10 @@ You are running inside a **cc-dev-${INSTANCE}** container on a remote Docker hos
 
 | Item | Value |
 |------|-------|
-| Workspace | `/root/workspace` — fork of `${UPSTREAM_URL}` |
+| Workspace | `/home/claude/workspace` — fork of `${UPSTREAM_URL}` |
 | Fork | `${FORK_REPO_PATH}` |
 | Registry | `${REGISTRY}` |
-| Docker | Full CLI access via host socket — build, run, inspect, logs |
-| Scripts | `/root/scripts/` — baked into this image |
+| Scripts | `/opt/cc/scripts/` — baked into this image |
 
 You are in **dev**. You do not have access to acceptance or production environments.
 
@@ -21,7 +20,7 @@ You are in **dev**. You do not have access to acceptance or production environme
 ## How code reaches production
 
 ```
-/workspace  ──git push──▶  ${FORK_REPO_PATH}  ──PR merge──▶  /scripts/package.sh
+/workspace  ──git push──▶  ${FORK_REPO_PATH}  ──PR merge──▶  /opt/cc/scripts/package.sh
                                                                       │
                                                               ghcr.io registry
                                                                       │
@@ -35,14 +34,14 @@ User manually approves each promotion gate. You do not promote builds yourself.
 
 ---
 
-## Scripts at /scripts/
+## Scripts at /opt/cc/scripts/
 
 | Script | When to use |
 |--------|-------------|
-| `/root/scripts/setup-dev.sh` | One-time init — already run during container setup |
-| `/root/scripts/package.sh [tag]` | After tests pass — builds and pushes image to registry |
-| `/root/scripts/spawn-dev.sh <name>` | To create a parallel dev instance for a separate branch |
-| `/root/scripts/ls-dev.sh` | To see all running dev instances and their SSH ports |
+| `/opt/cc/scripts/setup-dev.sh` | One-time init — already run during container setup |
+| `/opt/cc/scripts/package.sh [tag]` | After tests pass — builds and pushes image to registry |
+| `/opt/cc/scripts/spawn-dev.sh <name>` | To create a parallel dev instance for a separate branch |
+| `/opt/cc/scripts/ls-dev.sh` | To see all running dev instances and their SSH ports |
 
 ---
 
@@ -53,46 +52,6 @@ User manually approves each promotion gate. You do not promote builds yourself.
 - Commit style: conventional commits (`feat:`, `fix:`, `chore:`, `docs:`, `test:`)
 - Open PRs with `gh pr create` — target branch: `main` on `${FORK_REPO_PATH}`
 - **Never merge your own PRs** — user approval is required at every gate
-
----
-
-## Building and testing
-
-<!-- CC: fill in project-specific build and test commands after examining /workspace -->
-
-Build the project image:
-
-```bash
-docker build -t project-dev /root/workspace
-```
-
-Run an ephemeral test container:
-
-```bash
-docker run --rm \
-  --network nanobot-dev-net \
-  project-dev \
-  <entrypoint-and-args>
-```
-
-Read container output:
-
-```bash
-docker logs <container-name>
-```
-
----
-
-## Packaging a build
-
-When tests pass and the work is ready for acceptance:
-
-```bash
-/scripts/package.sh          # pushes ${REGISTRY}:dev-<sha> and ${REGISTRY}:dev
-/scripts/package.sh rc1      # also tags as :rc1
-```
-
-Then open a PR so the user can review and promote.
 
 ---
 

@@ -8,11 +8,10 @@ services:
       context: .
       dockerfile: Dockerfile.cc-dev
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - workspace:/root/workspace
-      - home:/root/.claude
-      - ssh:/root/.ssh
-      - data:/root/.nanobot
+      - workspace:/home/claude/workspace
+      - home:/home/claude/.claude
+      - ssh:/home/claude/.ssh
+      - data:/home/claude/.nanobot
     ports:
       - "${SSH_PORT}:22"
     environment:

@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
 # setup-dev.sh — one-time setup inside a cc-dev container
-# Run: docker exec cc-dev-<instance> /root/scripts/setup-dev.sh
+# Run: docker exec -u claude cc-dev-<instance> /opt/cc/scripts/setup-dev.sh
 # Fully non-interactive: deploy key is added to GitHub automatically via gh API.
 
 set -euo pipefail
 
 FORK_SSH="git@github.com:${FORK_REPO_PATH}.git"
-WORKSPACE="/root/workspace"
+WORKSPACE="/home/claude/workspace"
 
 echo "==> gh CLI will use GITHUB_TOKEN from environment automatically"
 
-echo "==> Logging into container registry"
-echo "${GITHUB_TOKEN}" | docker login ghcr.io -u "${GITHUB_USER}" --password-stdin
+if docker info &>/dev/null 2>&1; then
+    echo "==> Logging into container registry"
+    echo "${GITHUB_TOKEN}" | docker login ghcr.io -u "${GITHUB_USER}" --password-stdin
+else
+    echo "==> Skipping registry login (no Docker socket available)"
+fi
 
 echo "==> Configuring git identity"
 git config --global user.name  "${GIT_AUTHOR_NAME}"
@@ -19,12 +23,12 @@ git config --global user.email "${GIT_AUTHOR_EMAIL}"
 git config --global init.defaultBranch main
 
 echo "==> Generating SSH key pair (if not already present)"
-if [ ! -f /root/.ssh/id_ed25519 ]; then
-    ssh-keygen -t ed25519 -C "${GIT_AUTHOR_EMAIL}" -f /root/.ssh/id_ed25519 -N ""
+if [ ! -f /home/claude/.ssh/id_ed25519 ]; then
+    ssh-keygen -t ed25519 -C "${GIT_AUTHOR_EMAIL}" -f /home/claude/.ssh/id_ed25519 -N ""
 fi
 
 KEY_TITLE="cc-dev-$(hostname)"
-PUB_KEY="$(cat /root/.ssh/id_ed25519.pub)"
+PUB_KEY="$(cat /home/claude/.ssh/id_ed25519.pub)"
 KEY_MATERIAL="$(echo "${PUB_KEY}" | awk '{print $1, $2}')"
 
 echo "==> Adding deploy key '${KEY_TITLE}' to ${FORK_REPO_PATH}"
@@ -63,7 +67,7 @@ git merge --ff-only upstream/main || {
 
 echo "==> Generating CLAUDE.md in workspace (if not already present)"
 if [ ! -f "${WORKSPACE}/CLAUDE.md" ]; then
-    envsubst < /root/scripts/CLAUDE.md.template > "${WORKSPACE}/CLAUDE.md"
+    envsubst < /opt/cc/CLAUDE.md.template > "${WORKSPACE}/CLAUDE.md"
     cd "${WORKSPACE}"
     git add CLAUDE.md
     git commit -m "chore: add CLAUDE.md for cc-dev environment

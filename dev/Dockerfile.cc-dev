@@ -42,26 +42,32 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
 # Claude Code CLI
 RUN npm install -g @anthropic-ai/claude-code
 
-# sshd config: key auth only, no passwords, no PAM
+# Non-root user for Claude Code
+RUN useradd -m -s /bin/bash claude
+
+# sshd config: key auth only, no passwords, no PAM, no root login
 RUN mkdir -p /var/run/sshd && \
     sed -i \
-        -e 's/#PermitRootLogin.*/PermitRootLogin prohibit-password/' \
+        -e 's/#PermitRootLogin.*/PermitRootLogin no/' \
         -e 's/#PasswordAuthentication.*/PasswordAuthentication no/' \
         -e 's/#PubkeyAuthentication.*/PubkeyAuthentication yes/' \
         -e 's/UsePAM yes/UsePAM no/' \
         -e 's/#PermitUserEnvironment.*/PermitUserEnvironment yes/' \
-        /etc/ssh/sshd_config
+        /etc/ssh/sshd_config && \
+    echo 'AllowUsers claude' >> /etc/ssh/sshd_config
 
-# SSH client config: disable strict host checking for github.com
-RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh && \
-    printf 'Host github.com\n  StrictHostKeyChecking no\n  IdentityFile /root/.ssh/id_ed25519\n' \
-    > /root/.ssh/config && chmod 600 /root/.ssh/config
+# SSH client config for claude user: disable strict host checking for github.com
+RUN mkdir -p /home/claude/.ssh && chmod 700 /home/claude/.ssh && \
+    printf 'Host github.com\n  StrictHostKeyChecking no\n  IdentityFile /home/claude/.ssh/id_ed25519\n' \
+    > /home/claude/.ssh/config && \
+    chmod 600 /home/claude/.ssh/config && \
+    chown -R claude:claude /home/claude/.ssh
 
-WORKDIR /root/workspace
+WORKDIR /home/claude/workspace
 
-# Copy scripts and CLAUDE.md template into the image
-COPY scripts/ /root/scripts/
-COPY CLAUDE.md.template /root/scripts/CLAUDE.md.template
-RUN chmod +x /root/scripts/*.sh
+# Copy scripts and CLAUDE.md template into a world-readable location
+COPY scripts/ /opt/cc/scripts/
+COPY CLAUDE.md.template /opt/cc/CLAUDE.md.template
+RUN chmod +x /opt/cc/scripts/*.sh
 
-ENTRYPOINT ["/root/scripts/entrypoint.sh"]
+ENTRYPOINT ["/opt/cc/scripts/entrypoint.sh"]
