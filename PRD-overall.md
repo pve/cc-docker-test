@@ -138,13 +138,14 @@ VS Code Remote-SSH connects using the same `~/.ssh/config` entries, giving a ful
 
 ---
 
-## GitHub Auth
+## Auth
 
 | Tool | Method |
 |------|--------|
 | git (push/pull) | SSH keypair in `cc-dev-<instance>-ssh` volume; public key = deploy key on `pve/nanobot-ai` |
 | gh CLI | `GITHUB_TOKEN` env var (PAT with `repo` + `packages:write`) |
 | ghcr.io (docker push) | Same `GITHUB_TOKEN`, via `docker login ghcr.io` |
+| Claude Code | `CLAUDE_CODE_OAUTH_TOKEN` env var — OAuth token generated via `claude setup-token` on the host; injected into the container and forwarded to SSH sessions via `/root/.ssh/environment`. Survives container rebuilds; no interactive login needed. |
 
 ---
 
@@ -198,7 +199,8 @@ Tasks that remain manual (by design):
 | Update local `~/.ssh/config` | CC runs on remote host, cannot touch user's local machine |
 | Approve and merge PRs | Human gate — intentional |
 | Approve promotion dev→acc, acc→prod | Human gate — intentional |
-| Provide `GITHUB_TOKEN` and AI provider API key | Secrets — user supplies at setup time |
+| Provide `GITHUB_TOKEN` | Secret — user supplies at setup time |
+| Provide `CLAUDE_CODE_OAUTH_TOKEN` | Generated once via `claude setup-token` on host; stored in `.env.dev` |
 
 ---
 

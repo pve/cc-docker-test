@@ -16,7 +16,8 @@ fi
 # Requires PermitUserEnvironment yes in sshd_config (set in Dockerfile).
 rm -f /root/.ssh/environment
 for var in GITHUB_TOKEN GITHUB_USER FORK_REPO_PATH UPSTREAM_URL REGISTRY \
-           GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL; do
+           GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL \
+           CLAUDE_CODE_OAUTH_TOKEN; do
     if [ -n "${!var:-}" ]; then
         echo "${var}=${!var}" >> /root/.ssh/environment
     fi
