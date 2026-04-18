@@ -66,7 +66,7 @@ git merge --ff-only upstream/main || {
 }
 
 echo "==> Installing nanobot (editable) with uv"
-uv pip install --system --no-cache -e "${WORKSPACE}"
+uv pip install --system --break-system-packages --no-cache -e "${WORKSPACE}"
 
 echo "==> Generating CLAUDE.md in workspace (if not already present)"
 if [ ! -f "${WORKSPACE}/CLAUDE.md" ]; then
