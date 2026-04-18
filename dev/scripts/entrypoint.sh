@@ -23,6 +23,11 @@ for var in GITHUB_TOKEN GITHUB_USER FORK_REPO_PATH UPSTREAM_URL REGISTRY \
         echo "${var}=${!var}" >> /home/claude/.ssh/environment
     fi
 done
+# Add workspace venv to PATH if it exists (created by setup-dev.sh after clone)
+if [ -d "/home/claude/workspace/.venv" ]; then
+    echo "VIRTUAL_ENV=/home/claude/workspace/.venv" >> /home/claude/.ssh/environment
+    echo "PATH=/home/claude/workspace/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> /home/claude/.ssh/environment
+fi
 chmod 600 /home/claude/.ssh/environment
 
 # Bootstrap .credentials.json from CLAUDE_CODE_OAUTH_TOKEN if none exists.
