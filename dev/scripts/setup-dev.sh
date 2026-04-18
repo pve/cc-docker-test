@@ -65,6 +65,9 @@ git merge --ff-only upstream/main || {
     echo "         Review with: git log upstream/main..HEAD"
 }
 
+echo "==> Installing nanobot (editable) with uv"
+uv pip install --system --no-cache -e "${WORKSPACE}"
+
 echo "==> Generating CLAUDE.md in workspace (if not already present)"
 if [ ! -f "${WORKSPACE}/CLAUDE.md" ]; then
     envsubst < /opt/cc/CLAUDE.md.template > "${WORKSPACE}/CLAUDE.md"

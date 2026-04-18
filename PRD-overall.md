@@ -34,12 +34,14 @@ A fully isolated, Docker-based environment where Claude Code can develop, deploy
 |--|-----|------------|------|
 | **CC placement** | Inside `cc-dev-<instance>` container, running as non-root user `claude` | Inside `cc-acc` container | Inside `cc-prod` container |
 | **CC capabilities** | Full: code, build, run, logs, git, gh, push | Monitor + diagnose: logs, inspect, exec diagnostics | Read-only: logs, inspect |
-| **Nanobot mode** | Ephemeral CLI containers (on-demand) | Persistent gateway | Persistent gateway |
+| **Nanobot mode** | Run directly on host (not containerized in Phase 1) | Persistent gateway | Persistent gateway |
 | **Image source** | Built from `/workspace` (fork source) | Pulled from `ghcr.io/pve/nanobot-ai:<tag>` | Pulled from `ghcr.io/pve/nanobot-ai:<tag>` |
 | **Docker network** | `nanobot-dev-net` | `nanobot-acc-net` | `nanobot-prod-net` |
-| **Data volume** | `nanobot-dev-<instance>-data` (separate per instance) | `nanobot-acc-data` | `nanobot-prod-data` |
-| **CC home volume** | `cc-dev-<instance>-home` | `cc-acc-home` | `cc-prod-home` |
-| **SSH port on host** | 2222–2299 (auto-assigned per instance) | 2223 | 2224 |
+| **Workspace volume** | `cc-dev-<instance>_workspace` (fork source, one per instance) | n/a | n/a |
+| **Data volume** | `cc-dev-<instance>_data` (`~/.nanobot`, separate per instance) | `cc-acc_data` | `cc-prod_data` |
+| **CC home volume** | `cc-dev-<instance>_home` (`~/.claude`, separate per instance) | `cc-acc_home` | `cc-prod_home` |
+| **SSH volume** | `cc-dev-<instance>_ssh` (`~/.ssh`, keypair for GitHub) | `cc-acc_ssh` | `cc-prod_ssh` |
+| **SSH port on host** | 2222–2299 (auto-assigned per instance) | 2300 | 2301 |
 
 ---
 

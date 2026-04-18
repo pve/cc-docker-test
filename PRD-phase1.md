@@ -27,7 +27,7 @@ cc-dev container (remote host)
 ## Container: cc-dev
 
 ### Base image
-`ubuntu:24.04` (amd64)
+`ubuntu:24.04` (arm64 — target host is Hetzner arm64)
 
 ### Tools installed in image
 | Tool | Purpose |
@@ -45,10 +45,10 @@ cc-dev container (remote host)
 ### Mounts / Volumes
 | Mount | Type | Path in container | Purpose |
 |-------|------|-------------------|---------|
-| `/var/run/docker.sock` | bind (host socket) | `/var/run/docker.sock` | Docker API access |
-| `cc-dev-workspace` | named volume | `/workspace` | Nanobot fork source code (persists across container restarts) |
-| `cc-dev-home` | named volume | `/root/.claude` | CC config, memory, CLAUDE.md, settings |
-| `cc-dev-ssh` | named volume | `/root/.ssh` | SSH keypair for GitHub auth |
+| `cc-dev-<instance>_workspace` | named volume | `/home/claude/workspace` | Nanobot fork source code (persists across rebuilds) |
+| `cc-dev-<instance>_home` | named volume | `/home/claude/.claude` | CC config, credentials, `.claude.json`, settings |
+| `cc-dev-<instance>_ssh` | named volume | `/home/claude/.ssh` | SSH key pair for GitHub auth |
+| `cc-dev-<instance>_data` | named volume | `/home/claude/.nanobot` | Nanobot config and state |
 
 ### Environment variables (passed at runtime)
 | Variable | Purpose |
@@ -60,8 +60,8 @@ cc-dev container (remote host)
 | `REGISTRY` | ghcr.io image path without tag, e.g. `ghcr.io/pve/nanobot-ai` |
 | `GIT_AUTHOR_NAME` | Git commit identity |
 | `GIT_AUTHOR_EMAIL` | Git commit identity |
-| `SSH_AUTHORIZED_KEY` | User's local public key — written to `/root/.ssh/authorized_keys` at startup |
-| `CLAUDE_CODE_OAUTH_TOKEN` | OAuth token for Claude Code auth. Generated once via `claude setup-token` on the local machine. Bypasses macOS Keychain (unavailable in containers/SSH). Survives container rebuilds. |
+| `SSH_AUTHORIZED_KEY` | User's local public key — written to `/home/claude/.ssh/authorized_keys` at startup |
+| `CLAUDE_CODE_OAUTH_TOKEN` | OAuth token for Claude Code auth. Generated once via `claude setup-token` on the local machine. Bypasses macOS Keychain (unavailable in containers/SSH). Forwarded to SSH sessions via `/home/claude/.ssh/environment`. On fresh volumes, `entrypoint.sh` bootstraps `/home/claude/.claude/.credentials.json` so the interactive TUI opens without a browser flow. |
 
 ### Network
 - Attached to `nanobot-dev-net` only
@@ -75,28 +75,13 @@ ssh nanobot-main   # or nanobot-<instance>
 
 ---
 
-## Container: nanobot-dev-* (ephemeral)
+## Nanobot in Dev (Phase 1)
 
-Spun up by cc-dev for testing. Short-lived — always `--rm`.
+In Phase 1, nanobot is **not containerized**. CC runs nanobot directly in the workspace (`/home/claude/workspace`) rather than inside ephemeral Docker containers. This avoids complexity and keeps the focus on getting CC itself running correctly.
 
-### Image
-Built by cc-dev from `/workspace`:
-```bash
-docker build -t nanobot-dev /workspace
-```
+Nanobot config and state live in `/home/claude/.nanobot/`, backed by the `cc-dev-<instance>_data` named volume (persists across rebuilds).
 
-### Run pattern
-```bash
-docker run --rm \
-  --network nanobot-dev-net \
-  -v nanobot-dev-data:/root/.nanobot \
-  --name nanobot-dev-test-<suffix> \
-  nanobot-dev \
-  agent -m "Hello!"
-```
-
-### Named volume
-`nanobot-dev-data` — stores nanobot config (`config.json`), workspace, WhatsApp auth. Persists between test runs.
+> Containerized nanobot (`nanobot-dev-*` ephemeral containers) is deferred to a later phase.
 
 ---
 
@@ -126,8 +111,10 @@ docker run --rm \
 
 - Generated once on the local machine: `claude setup-token`
 - Stored in `.env.dev` (gitignored); copied to the remote host via `scp` (see Deployment Workflow)
-- Injected as env var at container startup and forwarded to SSH sessions via `/root/.ssh/environment`
+- Injected as env var at container startup and forwarded to SSH sessions via `/home/claude/.ssh/environment`
+- On fresh volumes, `entrypoint.sh` bootstraps `/home/claude/.claude/.credentials.json` from this token so the interactive TUI opens without a browser auth flow
 - Survives container rebuilds — no interactive `claude` login ever needed inside the container
+- `/home/claude/.claude.json` (CC config) is symlinked to inside the `home` volume so it persists across rebuilds
 
 ---
 
@@ -161,7 +148,7 @@ Tags:
 | Nanobot source code | `/workspace` (full read/write) |
 | Build logs | `docker build` stdout |
 | Container stdout/stderr | `docker logs nanobot-dev-test-*` |
-| Nanobot app logs | Written to `/root/.nanobot/` in the `nanobot-dev-data` volume; readable via `docker run --rm -v nanobot-dev-data:/data alpine cat /data/...` |
+| Nanobot app logs | Written to `/home/claude/.nanobot/` (backed by `data` volume); readable directly from the filesystem |
 | Docker events | `docker events --filter name=nanobot-dev-*` |
 | Container state | `docker inspect`, `docker ps` |
 | Git history | `git log`, `git diff` in `/workspace` |
@@ -205,7 +192,7 @@ scp dev/.env.dev hetznerhost.griddlejuiz.com:/root/cc-docker-test/dev/.env.dev
 # Host nanobot-main
 #   HostName hetznerhost.griddlejuiz.com
 #   Port 2222
-#   User root
+#   User claude
 #   IdentityFile ~/.ssh/id_ecdsa
 ```
 
@@ -217,7 +204,7 @@ scp dev/.env.dev hetznerhost.griddlejuiz.com:/root/cc-docker-test/dev/.env.dev
 ssh hetznerhost.griddlejuiz.com 'cd /root/cc-docker-test/dev && bash scripts/spawn-dev.sh main'
 
 # One-time setup inside the container (clones fork, adds deploy key, renders CLAUDE.md)
-ssh hetznerhost.griddlejuiz.com 'docker exec cc-dev-main /root/scripts/setup-dev.sh'
+ssh hetznerhost.griddlejuiz.com 'docker exec -u claude cc-dev-main /opt/cc/scripts/setup-dev.sh'
 
 # SSH in
 ssh nanobot-dev
