@@ -25,6 +25,18 @@ for var in GITHUB_TOKEN GITHUB_USER FORK_REPO_PATH UPSTREAM_URL REGISTRY \
 done
 chmod 600 /home/claude/.ssh/environment
 
+# Bootstrap .credentials.json from CLAUDE_CODE_OAUTH_TOKEN if none exists.
+# Allows the interactive TUI to open without a browser auth flow on fresh volumes.
+# If the user completes a real OAuth flow later, that overwrites this file with
+# proper refresh token credentials.
+CREDENTIALS="/home/claude/.claude/.credentials.json"
+if [ ! -f "${CREDENTIALS}" ] && [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+    EXPIRES=$(( $(date +%s) + 31536000 ))000
+    cat > "${CREDENTIALS}" <<EOF
+{"claudeAiOauth":{"accessToken":"${CLAUDE_CODE_OAUTH_TOKEN}","refreshToken":"","expiresAt":${EXPIRES},"scopes":["user:file_upload","user:inference","user:mcp_servers","user:profile","user:sessions:claude_code"],"subscriptionType":"pro","rateLimitTier":"default_claude_ai"}}
+EOF
+fi
+
 # Persist /home/claude/.claude.json inside the home volume so it survives rebuilds.
 # Claude Code writes config here; the home volume covers /home/claude/.claude/ (a directory)
 # but not /home/claude/.claude.json (a separate file). We store the real file inside the

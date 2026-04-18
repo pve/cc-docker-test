@@ -32,7 +32,7 @@ A fully isolated, Docker-based environment where Claude Code can develop, deploy
 
 | | Dev | Acceptance | Prod |
 |--|-----|------------|------|
-| **CC placement** | Inside `cc-dev-<instance>` container | Inside `cc-acc` container | Inside `cc-prod` container |
+| **CC placement** | Inside `cc-dev-<instance>` container, running as non-root user `claude` | Inside `cc-acc` container | Inside `cc-prod` container |
 | **CC capabilities** | Full: code, build, run, logs, git, gh, push | Monitor + diagnose: logs, inspect, exec diagnostics | Read-only: logs, inspect |
 | **Nanobot mode** | Ephemeral CLI containers (on-demand) | Persistent gateway | Persistent gateway |
 | **Image source** | Built from `/workspace` (fork source) | Pulled from `ghcr.io/pve/nanobot-ai:<tag>` | Pulled from `ghcr.io/pve/nanobot-ai:<tag>` |
@@ -145,7 +145,7 @@ VS Code Remote-SSH connects using the same `~/.ssh/config` entries, giving a ful
 | git (push/pull) | SSH keypair in `cc-dev-<instance>-ssh` volume; public key = deploy key on `pve/nanobot-ai` |
 | gh CLI | `GITHUB_TOKEN` env var (PAT with `repo` + `packages:write`) |
 | ghcr.io (docker push) | Same `GITHUB_TOKEN`, via `docker login ghcr.io` |
-| Claude Code | `CLAUDE_CODE_OAUTH_TOKEN` env var — OAuth token generated via `claude setup-token` on the host; injected into the container and forwarded to SSH sessions via `/root/.ssh/environment`. Survives container rebuilds; no interactive login needed. |
+| Claude Code | `CLAUDE_CODE_OAUTH_TOKEN` env var — OAuth token generated via `claude setup-token` on the host; injected into the container and forwarded to SSH sessions via `/home/claude/.ssh/environment`. On fresh volumes, `entrypoint.sh` bootstraps `.credentials.json` from this token so the interactive TUI opens without a browser flow. |
 
 ---
 
