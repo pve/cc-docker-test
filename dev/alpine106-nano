@@ -1,0 +1,49 @@
+# Copy to .env.dev and fill in values before running scripts/spawn-dev.sh
+# Never commit .env.dev to git.
+
+# ── Target project ────────────────────────────────────────────────────────────
+
+# GitHub user or org that owns the fork
+GITHUB_USER=pve
+
+# Fork to develop (user/repo format)
+FORK_REPO_PATH=pve/nanobot-ai
+
+# Upstream to sync from (HTTPS URL)
+UPSTREAM_URL=https://github.com/HKUDS/nanobot.git
+
+# Container registry for built images (without tag)
+REGISTRY=ghcr.io/pve/nanobot-ai
+
+# ── GitHub auth ───────────────────────────────────────────────────────────────
+
+# GitHub Personal Access Token — use a CLASSIC PAT (not fine-grained)
+# Fine-grained PATs do not yet fully support pushing to ghcr.io.
+#
+# Create at: https://github.com/settings/tokens/new
+#
+# Required scopes:
+#   repo            — clone, push, PRs, deploy key management via API
+#   write:packages  — push images to ghcr.io
+#   read:packages   — pull images from ghcr.io
+#
+# Set an expiry (90 days recommended). Never commit this file.
+GITHUB_TOKEN=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
+
+# ── Git identity ──────────────────────────────────────────────────────────────
+
+# Used for commits made inside cc-dev containers
+GIT_AUTHOR_NAME="Peter van Eijk"
+GIT_AUTHOR_EMAIL=peter@peterhjvaneijk.nl
+
+# ── SSH access ────────────────────────────────────────────────────────────────
+
+# Your local machine's public key — contents of ~/.ssh/id_ed25519.pub (or id_rsa.pub)
+# Written to /root/.ssh/authorized_keys inside each cc-dev container.
+# ── Claude Code auth ──────────────────────────────────────────────────────────
+# Extract with: security find-generic-password -s "Claude Code-credentials" -w
+CLAUDE_CODE_OAUTH_TOKEN=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
+
+SSH_AUTHORIZED_KEY="ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAAAIbmlzdHA1MjEAAACFBAC3H1Kj3oEgMlA3zoFcL2fXMEStyO+ztEhWdZkOftlPxVRXYqw/o6oUBnYNWGMRB+knRbeg/NswqfWhcMwJ/pq1DABrEp0N8r0JlcZvM6siCrSbKj8KlANJJgisBqvlxpc64UoByDTj760SVUpRZk4Jcs5daKhwVCVwIBbSmbQogdfGZQ== p@d1g.nl"
+
+OPENROUTER_API_KEY=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

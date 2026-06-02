@@ -12,6 +12,31 @@ There are three tiers of access. Each tier has a distinct role in setup and ongo
 
 ---
 
+```text
+  TIER 1                              TIER 2
+  Dev Top                             Host (uid root)
+ ┌──────────────────┐                ┌───────────────────────────────────────┐
+ │                  │ ──── :22 ────▶ │                                       │
+ │   SSH            │  .ssh/config   │   TIER 3             TIER 3           │
+ │                  │                │  ┌────────────┐    ┌────────────┐     │
+ │                  │  .ssh/config   │  │ Container  │    │ Container  │     │
+ │   Claude Code    │ ─── :2222 ──---─▶ │            │    │            │     │
+ │                  │  .ssh/config   │  │ CC         │    │ CC         │     │
+ └──────────────────┘                │  │ uid claude │    │ uid claude │     │
+                                     │  └────────────┘    └────────────┘     │
+                                     │                                       │
+                                     │  ~/.ssh/authorized_keys               │
+                                     └───────────────────────────────────────┘
+
+                                                    │ PAT
+                                                    ▼
+                                           ┌─────────────────┐
+                                           │     GitHub      │
+                                           └─────────────────┘
+```
+
+---
+
 ## GitHub Token
 
 Everything in the dev environment authenticates with a single GitHub Personal Access Token (PAT). It is stored in `.env.dev` on the remote host and injected into each container at startup.
@@ -85,8 +110,11 @@ ssh nanobot-dev          # terminal into cc-dev-main
 
 ### Prerequisites
 
-- Docker installed and running
+- QoL: .ssh/authorized_hosts filled in
+- Docker installed and running, including Docker compose
+- Git installed
 - Ports 2222–2299 open in firewall
+- QoL: update the /etc/hostname
 
 ### One-time bootstrap
 
@@ -101,9 +129,12 @@ cd /root/cc-yolo-docker/dev
 cp .env.dev.example .env.dev
 vim .env.dev    # fill in GITHUB_TOKEN, GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL, SSH_AUTHORIZED_KEY
 # your dev environment might need more secrets, see below
+# alternatively
+# ssh alpine102 git clone https://github.com/pve/cc-yolo-docker.git /root/cc-yolo-docker
+# scp .env.dev alpine102:/root/cc-yolo-docker/dev
 
 # Build the cc-dev image
-docker build -f Dockerfile.cc-dev -t cc-dev .
+docker build -f Dockerfile.cc-dev -t cc-dev /root/cc-yolo-docker/dev
 
 # Spawn the first dev instance, and name it.
 scripts/spawn-dev.sh main

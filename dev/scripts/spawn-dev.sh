@@ -31,8 +31,8 @@ PORT_RANGE_END=2299
 if docker ps -a --filter "label=cc.instance=${INSTANCE}" --filter "label=cc.env=dev" \
         --format '{{.Names}}' | grep -q .; then
     echo "ERROR: Dev instance '${INSTANCE}' already exists."
-    echo "  Start it:   docker compose -p ${PROJECT} -f docker-compose.dev.yml start"
-    echo "  Remove it:  docker compose -p ${PROJECT} -f docker-compose.dev.yml down -v"
+    echo "  Start it:   docker compose --project-name ${PROJECT} -f docker-compose.dev.yml start"
+    echo "  Remove it:  docker compose --project-name ${PROJECT} -f docker-compose.dev.yml down -v"
     exit 1
 fi
 
@@ -59,7 +59,7 @@ echo "==> Spawning cc-dev-${INSTANCE} on SSH port ${SSH_PORT}"
 
 INSTANCE="${INSTANCE}" SSH_PORT="${SSH_PORT}" \
     docker compose \
-        -p "${PROJECT}" \
+        --project-name "${PROJECT}" \
         -f "docker-compose.dev.yml" \
         up -d --build
 
