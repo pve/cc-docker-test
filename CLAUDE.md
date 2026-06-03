@@ -37,4 +37,7 @@ prod/                       Phase 3 (not yet implemented)
 
 - Changes to scripts are only active after rebuilding the cc-dev image (`docker build`)
 - The PRD files (`PRD-overall.md`, `PRD-phase1.md`) are the source of truth for design decisions — update them when making architectural changes
-- Test script changes by spawning a fresh instance with `scripts/spawn-dev.sh test`
+- Test changes that are made to a script by spawning a fresh instance with `scripts/spawn-dev.sh test`
+- Read CLAUDE.md and TASKS.md to understand the project
+- Check TASKS.md before starting your work, mark completed tasks to TASKS.md immediately, and add newly discovered tasks to TASKS.md when found. This includes user mentions of bugs etc.
+- TASKS.md should have sections high medium and low priority, numbered tasks, and completed tasks should move to a 'completed' section, with date of completion, and an optional brief note on evidence or decision.

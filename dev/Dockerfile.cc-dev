@@ -42,11 +42,19 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
 # uv (Python package manager)
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-# Claude Code CLI
+# Claude Code CLI — system install, acts as fallback when user prefix volume is empty
 RUN npm install -g @anthropic-ai/claude-code
 
 # Non-root user for Claude Code
 RUN useradd -m -s /bin/bash -p '*' claude
+
+# Set npm prefix for claude user so self-updates install to the user volume, not /usr/local
+RUN echo "prefix=/home/claude/.npm-global" >> /home/claude/.npmrc && \
+    chown claude:claude /home/claude/.npmrc
+
+# Convenience aliases for all login shells
+RUN echo 'alias yolo="claude --dangerously-skip-permissions"' \
+    > /etc/profile.d/cc-dev.sh
 
 # sshd config: key auth only, no passwords, no PAM, no root login
 RUN mkdir -p /var/run/sshd && \
@@ -57,7 +65,8 @@ RUN mkdir -p /var/run/sshd && \
         -e 's/UsePAM yes/UsePAM no/' \
         -e 's/#PermitUserEnvironment.*/PermitUserEnvironment yes/' \
         /etc/ssh/sshd_config && \
-    echo 'AllowUsers claude' >> /etc/ssh/sshd_config
+    echo 'AllowUsers claude' >> /etc/ssh/sshd_config && \
+    echo 'AllowTcpForwarding yes' >> /etc/ssh/sshd_config
 
 # SSH client config for claude user: disable strict host checking for github.com
 RUN mkdir -p /home/claude/.ssh && chmod 700 /home/claude/.ssh && \

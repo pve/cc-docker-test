@@ -14,7 +14,7 @@ services:
       - data:/home/claude/.nanobot
     ports:
       - "${SSH_PORT}:22"
-      - "8000"
+      - "8000:8000"
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - GITHUB_USER=${GITHUB_USER}

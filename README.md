@@ -1,38 +1,46 @@
-This repo deploys a container on a remote host with Claude Code installed inside it.
-So even your local Docker setup is not touched.
+# Why?
 
-It was originally conceived for testing and developing *nanobot* instances with a dangerously running Claude Code instance.
+You want to run Claude code in YoLo mode on a branch of a git repository, that is
+
+```shell
+claude --dangerously-skip-permissions
+```
+
+This repo deploys containers on a remote host with Claude Code (CC) installed inside it.
+So even your local Docker setup, if any, is not touched.
+
+It was originally conceived for testing and developing *nanobot* instances.
 That instance can fully control a nanobot instance, including viewing all its files and logfiles.
 
 # Dev Environment
 
 Claude Code runs inside `cc-dev-<instance>` containers on the remote host. Multiple named instances can run simultaneously — one per feature branch or experiment.
 
-There are three tiers of access. Each tier has a distinct role in setup and ongoing use.
+Three environments, each with a distinct role: **Bridge** (your laptop), **Deck** (the remote host), **Boiler** (inside the container).
 
 ---
 
 ```text
-  TIER 1                              TIER 2
-  Dev Top                             Host (uid root)
- ┌──────────────────┐                ┌───────────────────────────────────────┐
- │                  │ ──── :22 ────▶ │                                       │
- │   SSH            │  .ssh/config   │   TIER 3             TIER 3           │
- │                  │                │  ┌────────────┐    ┌────────────┐     │
- │                  │  .ssh/config   │  │ Container  │    │ Container  │     │
- │   Claude Code    │ ─── :2222 ──---─▶ │            │    │            │     │
- │                  │  .ssh/config   │  │ CC         │    │ CC         │     │
- └──────────────────┘                │  │ uid claude │    │ uid claude │     │
-                                     │  └────────────┘    └────────────┘     │
-                                     │                                       │
-                                     │  ~/.ssh/authorized_keys               │
-                                     └───────────────────────────────────────┘
+  BRIDGE                                       DECK
+  (your laptop)                                (remote host, uid root)
+ ┌────────────────────────────┐               ┌──────────────────────────────────────────────┐
+ │  ~/.ssh/config             │ ─── :22 ─────▶│  dev/.env.dev                                │
+ │  .env.dev                  │               │  ~/.ssh/authorized_keys                      │
+ │                            │               │                                              │
+ │  optionally:               │               │  BOILER                    BOILER            │
+ │  Claude Code               │ ── :2222 ────▶│  ┌─────────────────┐    ┌─────────────────┐ │
+ │                            │               │  │ CC              │    │ CC              │ │
+ └────────────────────────────┘               │  │ workspace/      │    │ workspace/      │ │
+                                              │  │ .claude/        │    │ .claude/        │ │
+                                              │  │ uid claude      │    │ uid claude      │ │
+                                              │  └─────────────────┘    └─────────────────┘ │
+                                              └──────────────────────────────────────────────┘
 
-                                                    │ PAT
-                                                    ▼
-                                           ┌─────────────────┐
-                                           │     GitHub      │
-                                           └─────────────────┘
+                                                          │ PAT
+                                                          ▼
+                                                 ┌─────────────────┐
+                                                 │     GitHub      │
+                                                 └─────────────────┘
 ```
 
 ---
@@ -67,9 +75,9 @@ Paste the generated token into `.env.dev` as `GITHUB_TOKEN`. It is passed to eac
 
 ---
 
-## Tier 1 — Local machine (your laptop)
+## Bridge — Local machine (your laptop)
 
-**Role:** SSH client only. Nothing runs here except your terminal and VS Code.
+**Role:** SSH client only. Nothing runs here except your terminal and optionally VS Code.
 Presumably though, you can run another Claude Code here to orchestrate your experiments.
 
 ### One-time setup
@@ -95,33 +103,34 @@ After bootstrap, you only ever use the `nanobot-dev` (port 2222) entry — you S
 
 ### Ongoing use after bootstrap
 
-From tier 1 (developer laptop)
+From the Bridge (your laptop):
 
 ```bash
-ssh nanobot-dev          # terminal into cc-dev-main
+ssh nanobot-dev          # terminal into cc-dev-main - The 'Deck'
 # or: open VS Code → Remote-SSH → nanobot-dev
 ```
 
 ---
 
-## Tier 2 — Remote host (port 22, bootstrap only)
+## Deck — Remote host (port 22, bootstrap only)
 
-**Role:** Docker daemon host. You log in here once to bootstrap the cc-dev image and first instance. After that, Claude Code manages everything from inside the container.
+**Role:** Docker daemon host. You log in here once to bootstrap the cc-dev image and first instance (the 'Boiler'). After that, Claude Code manages everything from inside the container.
 
 ### Prerequisites
 
-- QoL: .ssh/authorized_hosts filled in
+- QoL: `.ssh/authorized_hosts` filled in
 - Docker installed and running, including Docker compose
 - Git installed
 - Ports 2222–2299 open in firewall
-- QoL: update the /etc/hostname
+- QoL: update the `/etc/hostname`
 
 ### One-time bootstrap
 
 ```bash
+# Login to the Deck
 ssh hetznerhost.griddlejuiz.com
 
-# Clone the infrastructure repo (public, no auth needed)
+# Clone this repo, the infrastructure repo (public, no auth needed)
 git clone https://github.com/pve/cc-yolo-docker.git /root/cc-yolo-docker
 cd /root/cc-yolo-docker/dev
 
@@ -133,10 +142,10 @@ vim .env.dev    # fill in GITHUB_TOKEN, GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL, SSH_A
 # ssh alpine102 git clone https://github.com/pve/cc-yolo-docker.git /root/cc-yolo-docker
 # scp .env.dev alpine102:/root/cc-yolo-docker/dev
 
-# Build the cc-dev image
+# Build the cc-dev image locally (architecture)
 docker build -f Dockerfile.cc-dev -t cc-dev /root/cc-yolo-docker/dev
 
-# Spawn the first dev instance, and name it.
+# Spawn the first dev instance, and name it. QoL: name it after the branch you'll work on
 scripts/spawn-dev.sh main
 ```
 
@@ -144,13 +153,14 @@ scripts/spawn-dev.sh main
 
 To update the infrastructure later: `git pull` in `/root/cc-yolo-docker`, then rebuild the image.
 
-That's all that happens on the remote host. From here on, Claude Code inside the container manages the dev environment.
+That's all that happens on the Deck. From here on, Claude Code inside the Boiler manages the dev environment.
 
 ---
 
-## Tier 3 — Inside cc-dev container (port 2222, ongoing)
+## Boiler — Inside cc-dev container (port 2222, ongoing)
 
-**Role:** Where all development happens. Claude Code has full control: code, Docker, git, gh CLI, package builds.
+**Role:** Where all development happens.
+Claude Code has full control: code, Docker, git, gh CLI, package builds.
 
 ### Prerequisites
 
@@ -158,12 +168,13 @@ None, as all are included in the Dockerfile.
 
 ### One-time setup (first SSH session)
 
+This sets up the git repo.
+
 ```bash
 
 scp <local files> nanobot-main:
 ssh nanobot-main
-/root/scripts/setup-dev.sh
-# actually:
+
 /opt/cc/scripts/setup-dev.sh
 ```
 or
@@ -206,7 +217,7 @@ claude                              # start Claude Code
 claude --dangerously-skip-permissions # Run CC in yolo mode.
 
 # CC works autonomously — edits code, runs tests, reads logs, fixes issues
-# When ready to package:
+# When ready to package for the next stage (acceptance or production):
 /root/scripts/package.sh                 # builds + pushes ghcr.io/pve/nanobot-ai:dev-<sha>
 
 # To work on a parallel branch, CC spawns a new instance:
@@ -216,7 +227,7 @@ claude --dangerously-skip-permissions # Run CC in yolo mode.
 
 ## Instance management
 
-From tier 2:
+From the Deck:
 
 ```bash
 # List all dev instances and their SSH ports
@@ -244,3 +255,17 @@ docker compose -p cc-dev-feature-x -f /path/to/docker-compose.dev.yml down -v
 | `scripts/setup-dev.sh` | CC in container (once) | Clone fork, auth, deploy key, render CLAUDE.md — fully automated |
 | `scripts/package.sh` | CC in container | Build + tag + push image to ghcr.io |
 | `CLAUDE.md.template` | `setup-dev.sh` | Template rendered into `/home/claude/CLAUDE.md` on first setup |
+
+---
+
+## Tips
+
+### Tunnel a port from the Boiler to your laptop
+
+If a server is running on port 8000 in the Boiler and port 8000 is already in use locally:
+
+```bash
+ssh -L 8001:localhost:8000 alpine323-nano
+```
+
+`http://localhost:8001` on the Bridge hits port 8000 in the Boiler. The tunnel goes directly over the SSH connection — no extra port mapping needed on the Deck.

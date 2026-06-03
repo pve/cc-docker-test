@@ -5,7 +5,9 @@
       "Bash(gh api:*)",
       "Bash(git *)",
       "Bash(ssh:*)",
-      "Skill(update-config)"
+      "Skill(update-config)",
+      "WebFetch(domain:www.alpinelinux.org)",
+      "WebFetch(domain:wiki.alpinelinux.org)"
     ]
   }
 }

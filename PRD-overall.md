@@ -268,8 +268,7 @@ cc-yolo-docker/
 
 ## Backlog
 
-- **Docker credential store warning**: `docker login ghcr.io` warns that credentials are stored unencrypted in `/root/.docker/config.json`. Configure a credential helper (e.g. `pass`) or accept the risk given the container is ephemeral and access-controlled.
-- **Fork ahead of origin**: After upstream sync, workspace main is ahead of `origin/main` by the upstream commits. A `git push origin main` should follow the merge to keep the fork current on GitHub.
+See [TASKS.md](TASKS.md).
 
 ---
 
